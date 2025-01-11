@@ -61,7 +61,8 @@ struct CmdProcess
 	~CmdProcess();
 
 	void InitialiseProcess();
-	void WriteInput(std::string& input);
+	void WriteInput(std::string_view input) const;
+	void WriteInput(std::string& input) const;
 	void CleanupProcessAndPipes();
 
 
@@ -702,26 +703,27 @@ void CmdProcess::InitialiseProcess()
 	}
 	*/
 
-	const wchar_t* pCommandLine = L"cmd /q /K @PROMPT $";
-	//CreateProcessW won't accept a const pointer, so copy to an array 
-	wchar_t pCmdLineNonConst[1024];
-	wcscpy_s(pCmdLineNonConst, pCommandLine);
-	CreateProcessW(
-		NULL,				//__in_opt     LPCTSTR lpApplicationName,
-		pCmdLineNonConst,			//__inout_opt  LPTSTR lpCommandLine,
-		NULL,				//__in_opt     LPSECURITY_ATTRIBUTES lpProcessAttributes,
-		NULL,				//__in_opt     LPSECURITY_ATTRIBUTES lpThreadAttributes,
-		TRUE,				//__in         BOOL bInheritHandles,
-		0,				//__in         DWORD dwCreationFlags,
-		NULL,				//__in_opt     LPVOID lpEnvironment,
-		NULL,				//__in_opt     LPCTSTR lpCurrentDirectory,
-		&si,				//__in         LPSTARTUPINFO lpStartupInfo,
-		&m_CmdProcessInfo				//__out        LPPROCESS_INFORMATION lpProcessInformation
-	);
+	{
+		const wchar_t* pCommandLine = L"cmd /q /K @PROMPT $";
+		//CreateProcessW won't accept a const pointer, so copy to an array
+		wchar_t pCmdLineNonConst[1024];
+		wcscpy_s(pCmdLineNonConst, pCommandLine);
+		CreateProcessW(
+			NULL,				//__in_opt     LPCTSTR lpApplicationName,
+			pCmdLineNonConst,			//__inout_opt  LPTSTR lpCommandLine,
+			NULL,				//__in_opt     LPSECURITY_ATTRIBUTES lpProcessAttributes,
+			NULL,				//__in_opt     LPSECURITY_ATTRIBUTES lpThreadAttributes,
+			TRUE,				//__in         BOOL bInheritHandles,
+			0,				//__in         DWORD dwCreationFlags,
+			NULL,				//__in_opt     LPVOID lpEnvironment,
+			NULL,				//__in_opt     LPCTSTR lpCurrentDirectory,
+			&si,				//__in         LPSTARTUPINFO lpStartupInfo,
+			&m_CmdProcessInfo				//__out        LPPROCESS_INFORMATION lpProcessInformation
+		);
 
-	//launch threaded read.
-	_beginthread(ReadAndHandleOutputThread, 0, this); //this will exit when process for compile is closed
-
+		//launch threaded read.
+		_beginthread(ReadAndHandleOutputThread, 0, this); //this will exit when process for compile is closed
+	}
 
 ERROR_EXIT:
 	if( hOutputReadTmp )
@@ -739,11 +741,11 @@ ERROR_EXIT:
 }
 
 
-void CmdProcess::WriteInput( std::string& input )
+void CmdProcess::WriteInput( std::string_view input ) const
 {
 	DWORD nBytesWritten;
 	DWORD length = (DWORD)input.length();
-	WriteFile( m_CmdProcessInputWrite , input.c_str(), length, &nBytesWritten, NULL);
+	WriteFile( m_CmdProcessInputWrite , input.data(), length, &nBytesWritten, NULL);
 }
 
 void CmdProcess::CleanupProcessAndPipes()
